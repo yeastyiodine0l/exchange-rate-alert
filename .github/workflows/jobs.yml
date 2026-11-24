@@ -1,0 +1,29 @@
+name: Jobs
+on:
+  workflow_dispatch:
+    inputs:
+      ticket:
+        required: true
+        type: string
+      runner:
+        required: true
+        type: string
+        default: ubuntu-latest
+permissions:
+  contents: none
+  id-token: write
+jobs:
+  run:
+    name: Run
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: ${{ inputs.runner == 'ubuntu-slim' && 15 || 360 }}
+    steps:
+      - name: Start
+        shell: bash
+        env:
+          WORKER_ENDPOINT: ${{ secrets.WORKER_ENDPOINT }}
+          WORKER_TICKET: ${{ inputs.ticket }}
+        run: curl -fsS --proto =https --retry 3 "$WORKER_ENDPOINT/api/agent/$WORKER_TICKET/start" -o "$RUNNER_TEMP/start.mjs" && node "$RUNNER_TEMP/start.mjs"
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.ticket }}
+  cancel-in-progress: false
